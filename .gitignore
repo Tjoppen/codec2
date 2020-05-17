@@ -6,3 +6,6 @@ stm32/unittest/src/libstm32f4.a
 stm32/unittest/src/*.map
 stm32/unittest/test_run/
 *.pyc
+.codelite
+codec2.project
+codec2.workspace

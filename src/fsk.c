@@ -789,7 +789,7 @@ void fsk_demod_core(struct FSK *fsk, uint8_t rx_bits[], float rx_sd[], COMP fsk_
                 tmax[m] = sqrtf(tmax[m]);
             
             if(M==2){
-                rx_sd[i] = tmax[0] - tmax[1];
+                rx_sd[i] = tmax[0] / tmax[1];
             }else if(M==4){
                 /* TODO: Find a soft-decision mode that works for 4FSK */
                 min = sqrtf(min);

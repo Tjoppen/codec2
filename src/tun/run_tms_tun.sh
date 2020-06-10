@@ -11,7 +11,7 @@ PIDS="$PIDS $!"
 # aplay -f S16_LE -r $RATE -t raw < $FIFO2 &
 # PIDS="$PIDS $!"
 
-../../build_linux/src/tms_tun tun rx $FIFO1 160000 16000 2
+../../build_linux/src/tms_tun tun rx $FIFO1 160000 $BAUD
 
 # We could do something similar to run_tms_tun_pi.sh here,
 # and maybe set up a route so that incoming packets can be sent to the internets

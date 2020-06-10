@@ -378,6 +378,9 @@ target_link_libraries(ldpc_dec ${CMAKE_REQUIRED_LIBRARIES} codec2)
 add_executable(tms_tun tun/tms_tun.c fsk.c kiss_fft.c golay23.c)
 target_link_libraries(tms_tun pthread m ${CMAKE_REQUIRED_LIBRARIES})
 
+add_executable(tms_fsk tun/tms_fsk.cpp)
+target_link_libraries(tms_fsk rpitx)
+
 install(TARGETS codec2 EXPORT codec2-config
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

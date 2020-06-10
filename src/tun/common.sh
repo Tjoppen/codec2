@@ -1,6 +1,7 @@
 # this file is sourced by run_tms_tun*.sh
 FIFO1=/tmp/channel0.iq
 FIFO2=/tmp/tx0.s16le
+BAUD=16000
 
 rm -f $FIFO1 $FIFO2
 mkfifo $FIFO1 $FIFO2

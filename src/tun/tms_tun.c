@@ -41,7 +41,7 @@ u8 uw[48];
 typedef struct {
   char *filename;
   int fs, rs, f1, mtu, fd, p;
-  int complex; //1 -> s16le, 2 -> 2float
+  int format; //1 -> s16le, 2 -> 2float, 3 -> binary out, like freedv's tools. one symbol per byte
   FILE *f;
   u8 out_bits[2*(MTU_BITS + FSK_DEFAULT_NSYM)]; // might want to use some other upper bound on Nsym
   int out_bits_left;
@@ -377,10 +377,16 @@ void tx_loop(channel_t *tx, int num_tx) {
     // modulate bits for each TX that needs samples
     for (int x = 0; x < num_tx; x++) {
       if (FD_ISSET(tx[x].fd, &wfds)) {
+       if (tx[x].format == 3) {
+         if (tx[x].out_bits_left > 0) {
+           write(tx[x].fd, tx[x].out_bits, tx[x].out_bits_left);
+           tx[x].out_bits_left = 0;
+         }
+       } else {
         struct FSK *fsk = tx[x].fsk;
         int N = fsk->N;
 
-        if (tx[x].complex == 1) {
+        if (tx[x].format == 1) {
           float fsk_out[N];
           u8 bytes_out[N*2];
 
@@ -425,6 +431,7 @@ void tx_loop(channel_t *tx, int num_tx) {
         } else {
           tx[x].out_bits_left = 0;
         }
+       }
       }
     }
   }
@@ -471,7 +478,7 @@ int main(int argc, char *argv[])
       rx[num_rx].filename = argv[x+1];
       rx[num_rx].fs = atoi(argv[x+2]);
       rx[num_rx].rs = atoi(argv[x+3]);
-      rx[num_rx].p = atoi(argv[x+4]);
+      rx[num_rx].p = rx[num_rx].fs / rx[num_rx].rs;
       rx[num_rx].f1 = 1;
       rx[num_rx].mtu = MTU_BITS;
       if (pthread_create(&threads[num_rx], NULL, in_thread, &rx[num_rx]) < 0) {
@@ -479,21 +486,28 @@ int main(int argc, char *argv[])
         return 1;
       }
       num_rx++;
-      x += 4;
+      x += 3;
     } else if (!strcmp(argv[x], "tx")) {
       if (num_tx >= MAX_TX) {
         fprintf(stderr, "too many tx\n");
         return 1;
       }
       tx[num_tx].filename = argv[x+1];
-      tx[num_tx].fs = atoi(argv[x+2]);
-      tx[num_tx].rs = atoi(argv[x+3]);
-      tx[num_tx].f1 = atoi(argv[x+4]);
-      tx[num_tx].p = atoi(argv[x+5]);
-      tx[num_tx].complex = atoi(argv[x+6]);
-      if (tx[num_tx].complex != 1 && tx[num_tx].complex != 2) {
-        fprintf(stderr, "complex must be 1 or 2, not %i\n", tx[num_tx].complex);
+      tx[num_tx].format = atoi(argv[x+2]);
+      if (tx[num_tx].format < 1 || tx[num_tx].format > 3) {
+        fprintf(stderr, "format must be 1, 2 or 3, not %i\n", tx[num_tx].format);
         return 1;
+      }
+      if (tx[num_tx].format == 3) {
+        x += 2;
+      } else {
+        tx[num_tx].fs = atoi(argv[x+3]);
+        tx[num_tx].rs = atoi(argv[x+4]);
+        tx[num_tx].f1 = atoi(argv[x+5]);
+        tx[num_tx].p = atoi(argv[x+6]);
+        x += 6;
+        //tx[num_tx].fsk = fsk_create(tx[num_tx].fs, tx[num_tx].rs, 2, tx[num_tx].f1, tx[num_tx].rs);
+        tx[num_tx].fsk = fsk_create_hbr(tx[num_tx].fs, tx[num_tx].rs, 2, tx[num_tx].p, FSK_DEFAULT_NSYM, tx[num_tx].f1, tx[num_tx].rs);
       }
       tx[num_tx].mtu = MTU_BITS;
       //tx[num_tx].fd = open(tx[num_tx].filename, O_WRONLY | O_APPEND);
@@ -504,10 +518,7 @@ int main(int argc, char *argv[])
       }
       tx[num_tx].fd = fileno(tx[num_tx].f);
       tx[num_tx].out_bits_left = 0;
-      //tx[num_tx].fsk = fsk_create(tx[num_tx].fs, tx[num_tx].rs, 2, tx[num_tx].f1, tx[num_tx].rs);
-      tx[num_tx].fsk = fsk_create_hbr(tx[num_tx].fs, tx[num_tx].rs, 2, tx[num_tx].p, FSK_DEFAULT_NSYM, tx[num_tx].f1, tx[num_tx].rs);
       num_tx++;
-      x += 6;
     } else {
       fprintf(stderr, "bad arg %s\n", argv[x]);
       return 1;
@@ -525,7 +536,9 @@ int main(int argc, char *argv[])
 
   for (int x = 0; x < num_tx; x++) {
     fclose(tx[x].f);
-    fsk_destroy(tx[x].fsk);
+    if (tx[x].format != 3) {
+      fsk_destroy(tx[x].fsk);
+    }
   }
 }
 

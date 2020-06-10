@@ -7,7 +7,7 @@
 #
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.9" CACHE STRING "Minimum OS X deployment version")
 
-project(codec2 C)
+project(codec2 C CXX)
 
 cmake_minimum_required(VERSION 3.0)
 
@@ -220,6 +220,7 @@ if(LPCNET)
     endif()
 endif()
 
+link_directories(rpitx/src)
 
 #
 # codec2 library
